@@ -12,14 +12,8 @@ namespace Symlinker
         //    public static string CurrentDir { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
         public static string CurrentDir { get; set; } = @"C:\Users\fengy\Desktop\ServerBase";
 
-        public static void Main(string[] args)
+        private static void ProcessingData(ref List<SymlinkFolderData> folderDatas, ref List<SymlinkFileData> fileDatas)
         {
-            Console.WriteLine("口袋之都服务器内部使用!");
-            InitializeConfig();
-
-            var folderDatas = new List<SymlinkFolderData>();
-            var fileDatas = new List<SymlinkFileData>();
-            Console.WriteLine("正在处理数据");
             foreach (var customFolderConfig in Config.CurrentConfig.CustomFolderConfigs)
             {
                 var dirInfo = Utils.GetDirectoryInfo(customFolderConfig.SourceFolderName);
@@ -58,51 +52,58 @@ namespace Symlinker
                 fileDatas.AddRange(fileData);
                 folderDatas.AddRange(folderData);
             }
+        }
 
+        private static void GetExpiredSymlink(ref List<SymlinkFolderData> folderDatas,
+            ref List<SymlinkFileData> fileDatas, ref List<FileInfo> fileLinksToClean,
+            ref List<DirectoryInfo> folderLinksToClean)
+        {
+            var fileDataNames = fileDatas.Select(data => data.FileInfo.Name);
+            var directoryDataNames = folderDatas.Select(data => data.DirectoryInfo.Name);
+
+            foreach (var symlinkTargetFolders in GetAutoSearchConfigSymlinkTargetFolders())
+            {
+                Utils.GetFilesAndDirectories(symlinkTargetFolders, out var directoryInfos, out var fileInfos);
+
+                foreach (var fileInfo in fileInfos)
+                    if (fileInfo.Exists && !fileDataNames.Contains(fileInfo.Name))
+                        if (fileInfo.IsSymbolicLink())
+                            fileLinksToClean.Add(fileInfo);
+
+                foreach (var directoryInfo in directoryInfos)
+                    if (directoryInfo.Exists && !directoryDataNames.Contains(directoryInfo.Name))
+                        if (directoryInfo.IsSymbolicLink())
+                            folderLinksToClean.Add(directoryInfo);
+            }
+        }
+
+        public static void Main(string[] args)
+        {
+            Directory.SetCurrentDirectory(CurrentDir);
+            Console.WriteLine("口袋之都服务器内部使用!");
+            InitializeConfig();
+
+            var folderDatas = new List<SymlinkFolderData>();
+            var fileDatas = new List<SymlinkFileData>();
+            Console.WriteLine("正在处理数据");
+            ProcessingData(ref folderDatas, ref fileDatas);
             Console.WriteLine("数据处理完成");
             foreach (var fileData in fileDatas) fileData.CreateSymlink();
             foreach (var folderData in folderDatas) folderData.CreateSymlink();
 
             Console.WriteLine("创建完成，清理杂鱼!");
-            var fileDataNames = fileDatas.Select(data=> data.FileInfo.Name);
-            var directoryDataNames = folderDatas.Select(data => data.DirectoryInfo.Name);
 
             var fileLinksToClean = new List<FileInfo>();
             var folderLinksToClean = new List<DirectoryInfo>();
-            
-            foreach (var symlinkTargetFolders in GetAutoSearchConfigSymlinkTargetFolders())
-            {
-                Utils.GetFilesAndDirectories(symlinkTargetFolders,out var directoryInfos,out var fileInfos);
-               
-                foreach (var fileInfo in fileInfos)
-                {
-                    
-                    if (fileInfo.Exists && !fileDataNames.Contains(fileInfo.Name) )
-                    {
-                        if (fileInfo.IsSymbolicLink())
-                        {
-                            fileLinksToClean.Add(fileInfo);
-                        }
-                    }
-                
-                    
-                }
+            GetExpiredSymlink(ref folderDatas, ref fileDatas, ref fileLinksToClean, ref folderLinksToClean);
+            Console.WriteLine("杂鱼统计完成，总计:{0}.即将清理!", fileLinksToClean.Count + folderLinksToClean.Count);
+            CleanSymlinks(ref fileLinksToClean, ref folderLinksToClean);
+        }
 
-                foreach (var directoryInfo in directoryInfos)      
-                {
-                    if (directoryInfo.Exists && !directoryDataNames.Contains(directoryInfo.Name) )
-                    {
-                        if (directoryInfo.IsSymbolicLink())
-                        {
-                            folderLinksToClean.Add(directoryInfo);
-                        }
-                    }
-                }
-               
-            }
-            Console.WriteLine("杂鱼统计完成，总计:{0}.即将清理!",fileLinksToClean.Count+folderLinksToClean.Count);
+        private static void CleanSymlinks(ref List<FileInfo> fileLinksToClean,
+            ref List<DirectoryInfo> folderLinksToClean)
+        {
             foreach (var fileInfo in fileLinksToClean)
-            {
                 try
                 {
                     File.Delete(fileInfo.FullName);
@@ -110,34 +111,29 @@ namespace Symlinker
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                        
                 }
-                   
-            }
+
             foreach (var directoryInfo in folderLinksToClean)
-            {
                 try
                 {
-                    Directory.Delete(directoryInfo.FullName);
+                    Directory.Delete(directoryInfo.FullName, true);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                        
                 }
-                   
-            }
         }
 
         private static IEnumerable<string> GetAutoSearchConfigSymlinkTargetFolders()
         {
-            var symlinkTargetFolderss = Config.CurrentConfig.AutoSearchConfigs.Select(config => config.SymlinkTargetFolders);
+            var symlinkTargetFolderss =
+                Config.CurrentConfig.AutoSearchConfigs.Select(config => config.SymlinkTargetFolders);
             var targetFolders = symlinkTargetFolderss.SelectMany(symlinkTargetFolders => symlinkTargetFolders).ToList();
-         
+
             return targetFolders.Distinct();
         }
 
-     
+
         public static void InitializeConfig()
         {
             var configFile = Path.Combine(CurrentDir, "symlinker.json");

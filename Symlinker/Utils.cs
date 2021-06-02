@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using SymbolicLinkSupport;
 
 namespace Symlinker
@@ -10,65 +9,84 @@ namespace Symlinker
     {
         public static void CreateSymlink(this SymlinkFolderData symlinkFolderData)
         {
-            foreach (var targetFolder in symlinkFolderData.TargetFolders)
+            try
             {
-                if (Directory.Exists(targetFolder))
+                foreach (var targetFolder in symlinkFolderData.TargetFolders)
                 {
-                    var file = new DirectoryInfo(targetFolder);
-                    if (!file.IsSymbolicLink() || !file.IsSymbolicLinkValid())
+                    if (Directory.Exists(targetFolder))
                     {
-                        Directory.Delete(targetFolder);
+                        var file = new DirectoryInfo(targetFolder);
+                        if (!file.IsSymbolicLink() || !file.IsSymbolicLinkValid())
+                        {
+                            Directory.Delete(targetFolder, true);
+                            CreateSymlinkInternal();
+                        }
+                    }
+                    else
+                    {
                         CreateSymlinkInternal();
                     }
-                }
-                else
-                {
-                    CreateSymlinkInternal();
-                }
 
 
-                void CreateSymlinkInternal()
-                {
-                    symlinkFolderData.DirectoryInfo.CreateSymbolicLink(targetFolder, !Path.IsPathRooted(targetFolder));
-                    
-                                    
-                    foreach (var folder in  symlinkFolderData.TargetFolders)
+                    void CreateSymlinkInternal()
                     {
-                        Console.WriteLine(symlinkFolderData.DirectoryInfo.FullName + "--->" + folder);
+                        var target = "";
+                        target = !Path.IsPathRooted(targetFolder)
+                            ? Path.Combine(Program.CurrentDir, targetFolder)
+                            : targetFolder;
+                        symlinkFolderData.DirectoryInfo.CreateSymbolicLink(target, false);
+
+
+                        foreach (var folder in symlinkFolderData.TargetFolders)
+                            Console.WriteLine(symlinkFolderData.DirectoryInfo.FullName + "--->" + folder);
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
         public static void CreateSymlink(this SymlinkFileData symlinkFileData)
         {
-            foreach (var targetFileName in symlinkFileData.TargetFileNames)
+            try
             {
-                if (File.Exists(targetFileName))
+                foreach (var targetFileName in symlinkFileData.TargetFileNames)
                 {
-                    var file = new FileInfo(targetFileName);
-                    if (!file.IsSymbolicLink() || !file.IsSymbolicLinkValid())
+                    if (File.Exists(targetFileName))
                     {
-                        File.Delete(targetFileName);
+                        var file = new FileInfo(targetFileName);
+                        if (!file.IsSymbolicLink() || !file.IsSymbolicLinkValid())
+                        {
+                            File.Delete(targetFileName);
+                            CreateSymlinkInternal();
+                        }
+                    }
+                    else
+                    {
                         CreateSymlinkInternal();
                     }
-                }
-                else
-                {
-                    CreateSymlinkInternal();
-                }
 
 
-                void CreateSymlinkInternal()
-                {
-                    symlinkFileData.FileInfo.CreateSymbolicLink(targetFileName, !Path.IsPathRooted(targetFileName));
-                    
-                    foreach (var folder in  symlinkFileData.TargetFileNames)
+                    void CreateSymlinkInternal()
                     {
-                        Console.WriteLine(symlinkFileData.FileInfo.FullName + "--->" + folder);
+                        var target = "";
+                        target = !Path.IsPathRooted(targetFileName)
+                            ? Path.Combine(Program.CurrentDir, targetFileName)
+                            : targetFileName;
+
+
+                        symlinkFileData.FileInfo.CreateSymbolicLink(target, false);
+
+                        foreach (var folder in symlinkFileData.TargetFileNames)
+                            Console.WriteLine(symlinkFileData.FileInfo.FullName + "--->" + folder);
                     }
                 }
-                
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
