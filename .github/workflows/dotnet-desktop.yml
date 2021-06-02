@@ -59,6 +59,7 @@ jobs:
       Solution_Name: Symlinker.sln                       # Replace with your solution name, i.e. MyWpfApp.sln.
       Test_Project_Path: your-test-project-path  # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
       OutputPath: _build
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     steps:
     - name: Checkout
       uses: actions/checkout@v2
