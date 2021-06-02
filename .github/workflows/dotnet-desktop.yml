@@ -65,6 +65,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.0.2
     # Install the .NET Core workload
     - name: Install .NET Core
       uses: actions/setup-dotnet@v1
@@ -85,7 +90,7 @@ jobs:
     - name: Execute unit tests
       run: dotnet test
     - name: Restore Packages
-      run: nuget restore EzRep.sln
+      run: nuget restore $env:Solution_Name
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Build the application
