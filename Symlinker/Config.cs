@@ -8,6 +8,10 @@ namespace Symlinker
     public class FileConfig
     {
         public string SourceFileName { get; set; }
+        /// <summary>
+        /// Optional
+        /// </summary>
+        public string ParentRootForIdentifyExpiredLink { get; set; }
         public IEnumerable<string> SymlinkTargetName { get; set; }
     }
 
@@ -20,18 +24,27 @@ namespace Symlinker
         public IEnumerable<string> SymlinkTargetFolder { get; set; }
     }
 
+    public enum FilterMode
+    {
+        Regular,
+        Recursive
+    }
+
     /// <summary>
     ///     Symlink folders and files inside the FolderToBeSearched
     /// </summary>
     public class AutoSearchConfig
     {
+        public FilterMode Mode { get; set; } = FilterMode.Regular;
         public string FolderToBeSearched { get; set; }
         public IEnumerable<string> SymlinkTargetFolders { get; set; }
+
+        public IEnumerable<TargetFilter> TargetFilters { get; set; } = new TargetFilter[] { };
     }
 
     public class Config
     {
-        [JsonIgnore] public static Config CurrentConfig { get; set; } = new Config();
+        [JsonIgnore] public static Config CurrentConfig { get; set; } = new();
 
         /// <summary>
         ///     Create Directories Symlink
@@ -48,39 +61,108 @@ namespace Symlinker
             {
                 FolderToBeSearched = Path.Combine(Program.CurrentDir, "共享插件"),
                 SymlinkTargetFolders = new[]
-                    {Path.Combine(Program.CurrentDir, "[主服01]TestFlight Server 0528-0.0.1/plugins")}
-            };
-            var pluginConfig = new AutoSearchConfig
-            {
-                FolderToBeSearched = Path.Combine(Program.CurrentDir, "共享插件配置"),
-                SymlinkTargetFolders = new[]
-                    {Path.Combine(Program.CurrentDir, "[主服01]TestFlight Server 0528-0.0.1/plugins")}
+                {
+                    "[主服01]主服/plugins",
+                    "[主服02]地皮开放世界服/plugins",
+                    "[主服03]剧情旷野世界服/plugins"
+                },
+                TargetFilters = new List<TargetFilter>()
             };
             var mod = new AutoSearchConfig
             {
                 FolderToBeSearched = Path.Combine(Program.CurrentDir, "共享模组"),
                 SymlinkTargetFolders = new[]
-                    {Path.Combine(Program.CurrentDir, "[主服01]TestFlight Server 0528-0.0.1/mods")}
+                {
+                    "[主服01]主服/mods",
+                    "[主服02]地皮开放世界服/mods",
+                    "[主服03]剧情旷野世界服/mods"
+                },
+                TargetFilters = new List<TargetFilter>()
+            };
+            var sharedFile = new AutoSearchConfig
+            {
+                FolderToBeSearched = Path.Combine(Program.CurrentDir, "共享文件"),
+                SymlinkTargetFolders = new[]
+                {
+                    "[主服01]主服",
+                    "[主服02]地皮开放世界服",
+                    "[主服03]剧情旷野世界服"
+                },
+                TargetFilters = new List<TargetFilter>()
             };
 
-            var bukkitYml = new FileConfig
+            var pluginConfig = new AutoSearchConfig
             {
-                SourceFileName = Path.Combine(Program.CurrentDir, "bukkit.yml"),
-                SymlinkTargetName = new[]
-                    {Path.Combine(Program.CurrentDir, "[主服01]TestFlight Server 0528-0.0.1/bukkit.yml")}
+                Mode = FilterMode.Recursive,
+                FolderToBeSearched = Path.Combine(Program.CurrentDir, "共享插件配置"),
+                SymlinkTargetFolders = new[]
+                {
+                    "[主服01]主服/plugins",
+                    "[主服02]地皮开放世界服/plugins",
+                    "[主服03]剧情旷野世界服/plugins"
+                },
+                TargetFilters = new List<TargetFilter>
+                {
+                    new() {Path = @"Essentials/userdata", Type = 2},
+                    new() {Path = @"Essentials/warps", Type = 2},
+                    new() {Path = @"Essentials/usermap.csv", Type = 1},
+                    new() {Path = @"InvUnload\playerdata", Type = 2},
+                    new() {Path = @"Multiverse-Core\worlds.yml", Type = 1},
+                    new() {Path = @"CrazyCrates\data.yml", Type = 1},
+                    new() {Path = @"CrazyCrates\Locations.yml", Type = 1},
+                    new() {Path = @"PixelmonEssentials\data", Type = 2},
+                    new() {Path = @"PlugMan\resourcemaps.yml", Type = 1},
+                    new() {Path = @"PokeBackup\Backups.yml", Type = 1},
+                    new() {Path = @"PokeBackup\BackupData", Type = 2},
+                    new() {Path = @"React\cache", Type = 2},
+                    new() {Path = @"React\worlds", Type = 2},
+                    new() {Path = @"SuperVanish\data.yml", Type = 1},
+                    new() {Path = @"WarpSystem\Backups", Type = 2},
+                    new() {Path = @"WarpSystem\Memory", Type = 2},
+                    new() {Path = @"WorldEdit\sessions", Type = 2},
+                    new() {Path = @"HolographicDisplays\database.yml", Type = 1},
+                    new() {Path = @"LegendLog\LegendaryCapture.log", Type = 1},
+                    new() {Path = @"LegendLog\LegendaryReplace.log", Type = 1},
+                    new() {Path = @"LegendLog\LegendarySpawn.log", Type = 1},
+                    new() {Path = @"LagAssist\data.yml", Type =1},
+                    new() {Path = @"ProtocolLib\lastupdate", Type = 1},
+                    new() {Path = @"OpGuard\guard.log", Type = 1},
+                    new() {Path = @"Plan\ServerInfoFile.yml", Type = 1},
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                }
             };
-            var spigotYml = new FileConfig
-            {
-                SourceFileName = Path.Combine(Program.CurrentDir, "spigot.yml"),
-                SymlinkTargetName = new[]
-                    {Path.Combine(Program.CurrentDir, "[主服01]TestFlight Server 0528-0.0.1/spigot.yml")}
-            };
-
+            /*new() {Path = "共享插件配置/Essentials/userdata", Type = 2},
+            new() {Path = "共享插件配置/Essentials/warps", Type = 2},
+            new() {Path = "共享插件配置/Essentials/usermap.csv", Type = 1},
+            new() {Path = @"共享插件配置\InvUnload\playerdata", Type = 2},
+            new() {Path = @"共享插件配置\Multiverse-Core\worlds.yml", Type = 1},
+            new() {Path = @"共享插件配置\CrazyCrates\data.yml", Type = 1},
+            new() {Path = @"共享插件配置\CrazyCrates\Locations.yml", Type = 1},
+            new() {Path = @"共享插件配置\PixelmonEssentials\data", Type = 2},
+            new() {Path = @"共享插件配置\PlugMan\resourcemaps.yml", Type = 1},
+            new() {Path = @"共享插件配置\PokeBackup\Backups.yml", Type = 1},
+            new() {Path = @"共享插件配置\PokeBackup\BackupData", Type = 2},
+            new() {Path = @"共享插件配置\React\cache", Type = 2},
+            new() {Path = @"共享插件配置\React\worlds", Type = 2},
+            new() {Path = @"共享插件配置\SuperVanish\data.yml", Type = 1},
+            new() {Path = @"共享插件配置\WarpSystem\Backups", Type = 2},
+            new() {Path = @"共享插件配置\WarpSystem\Memory", Type = 2},
+            new() {Path = @"共享插件配置\WorldEdit\sessions", Type = 2}*/
             config.AutoSearchConfigs = config.AutoSearchConfigs.Append(plugin);
             config.AutoSearchConfigs = config.AutoSearchConfigs.Append(mod);
             config.AutoSearchConfigs = config.AutoSearchConfigs.Append(pluginConfig);
-            config.CustomFileConfigs = config.CustomFileConfigs.Append(bukkitYml);
-            config.CustomFileConfigs = config.CustomFileConfigs.Append(spigotYml);
+            config.AutoSearchConfigs = config.AutoSearchConfigs.Append(sharedFile);
+
             return config;
         }
     }
